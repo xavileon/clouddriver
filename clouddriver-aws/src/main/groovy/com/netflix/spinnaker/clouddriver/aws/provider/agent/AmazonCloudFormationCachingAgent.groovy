@@ -20,11 +20,13 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.model.Stack
 import com.amazonaws.services.ec2.model.Address
 import com.amazonaws.services.opsworks.model.DescribeStacksResult
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.cats.agent.*
 import com.netflix.spinnaker.cats.cache.CacheData
 import com.netflix.spinnaker.cats.cache.DefaultCacheData
 import com.netflix.spinnaker.cats.provider.ProviderCache
-import com.netflix.spinnaker.clouddriver.aws.cache.Keys
+import com.netflix.spinnaker.clouddriver.aws.data.Keys
 import com.netflix.spinnaker.clouddriver.aws.provider.AwsInfrastructureProvider
 import com.netflix.spinnaker.clouddriver.aws.security.AmazonClientProvider
 import com.netflix.spinnaker.clouddriver.aws.security.NetflixAmazonCredentials
@@ -32,25 +34,28 @@ import com.netflix.spinnaker.clouddriver.model.CloudFormation
 import groovy.util.logging.Slf4j
 
 import static com.netflix.spinnaker.cats.agent.AgentDataType.Authority.AUTHORITATIVE
-import static com.netflix.spinnaker.clouddriver.aws.cache.Keys.Namespace.CLOUDFORMATION_STACKS
+import static com.netflix.spinnaker.clouddriver.core.provider.agent.Namespace.CLOUDFORMATION
 
 @Slf4j
 class AmazonCloudFormationCachingAgent implements CachingAgent, AccountAware {
-
   final AmazonClientProvider amazonClientProvider
   final NetflixAmazonCredentials account
   final String region
+  final ObjectMapper objectMapper
 
   static final Set<AgentDataType> types = Collections.unmodifiableSet([
-    AUTHORITATIVE.forType(CLOUDFORMATION_STACKS.ns)
+    AUTHORITATIVE.forType(CLOUDFORMATION.ns)
   ] as Set)
 
   AmazonCloudFormationCachingAgent(AmazonClientProvider amazonClientProvider,
                                    NetflixAmazonCredentials account,
-                                   String region) {
+                                   String region,
+                                   ObjectMapper objectMapper
+                                   ) {
     this.amazonClientProvider = amazonClientProvider
     this.account = account
     this.region = region
+    this.objectMapper = objectMapper
   }
 
   @Override
@@ -80,7 +85,20 @@ class AmazonCloudFormationCachingAgent implements CachingAgent, AccountAware {
 
     List<Stack> stacks = cloudformation.describeStacks().stacks
 
-    log.info("Caching ${stacks.size()} items in ${agentType}")
-    new DefaultCacheResult([(CLOUDFORMATION_STACKS.ns): stacks])
+    Collection<CacheData> stackCacheData = new ArrayList<>(stacks.size())
+
+    for (Stack stack : stacks) {
+      def stackId = Keys.getCloudFormationKey(stack.stackId, account.name, region)
+      stackCacheData.add(new DefaultCacheData(stackId, [
+        tags: stack.tags,
+        outputs: stack.outputs,
+        stackName: stack.stackName,
+        creationTime: stack.creationTime,
+        stackStatus: stack.stackStatus,
+      ], [(CLOUDFORMATION.ns): [stackId]]))
+    }
+
+    log.info("Caching ${stackCacheData.size()} items in ${agentType}")
+    new DefaultCacheResult([(CLOUDFORMATION.ns): stackCacheData])
   }
 }
