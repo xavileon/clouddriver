@@ -20,8 +20,6 @@ package com.netflix.spinnaker.clouddriver.model
  * A representation of a CloudDriver stack
  */
 interface CloudFormation {
-  String getType()
-
   String getStackId()
 
   Map getTags()
