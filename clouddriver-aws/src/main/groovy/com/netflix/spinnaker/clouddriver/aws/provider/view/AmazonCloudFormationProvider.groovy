@@ -22,13 +22,11 @@ import com.netflix.spinnaker.cats.cache.Cache
 import com.netflix.spinnaker.cats.cache.CacheData
 import com.netflix.spinnaker.cats.cache.RelationshipCacheFilter
 import com.netflix.spinnaker.clouddriver.aws.cache.Keys
-import com.netflix.spinnaker.clouddriver.aws.model.AmazonElasticIp
 import com.netflix.spinnaker.clouddriver.model.CloudFormationProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 import static com.netflix.spinnaker.clouddriver.aws.cache.Keys.Namespace.CLOUDFORMATION_STACKS
-import static com.netflix.spinnaker.clouddriver.aws.cache.Keys.Namespace.ELASTIC_IPS
 
 @Component
 class AmazonCloudFormationProvider implements CloudFormationProvider<AmazonCloudFormation> {
@@ -44,17 +42,17 @@ class AmazonCloudFormationProvider implements CloudFormationProvider<AmazonCloud
 
   @Override
   Set<AmazonCloudFormation> getAllByAccount(String account) {
-    loadResults(cacheView.filterIdentifiers(CLOUDFORMATION_STACKS.ns, Keys.getCloudFormationKey('*', '*', account)))
+    loadResults(cacheView.filterIdentifiers(CLOUDFORMATION_STACKS.ns, Keys.getCloudFormationStackKey('*', '*', account)))
   }
 
   @Override
-  Set<AmazonElasticIp> getAllByAccountAndRegion(String account, String region) {
-    loadResults(cacheView.filterIdentifiers(ELASTIC_IPS.ns, Keys.getElasticIpKey('*', region, account)))
+  Set<AmazonCloudFormation> getAllByAccountAndRegion(String account, String region) {
+    loadResults(cacheView.filterIdentifiers(CLOUDFORMATION_STACKS.ns, Keys.getCloudFormationStackKey('*', region, account)))
   }
 
-  Set<AmazonElasticIp> loadResults(Collection<String> identifiers) {
-    cacheView.getAll(ELASTIC_IPS.ns, identifiers, RelationshipCacheFilter.none()).collect { CacheData data ->
-      objectMapper.convertValue(data.attributes, AmazonElasticIp)
+  Set<AmazonCloudFormation> loadResults(Collection<String> identifiers) {
+    cacheView.getAll(CLOUDFORMATION_STACKS.ns, identifiers, RelationshipCacheFilter.none()).collect { CacheData data ->
+      objectMapper.convertValue(data.attributes, AmazonCloudFormation)
     }
   }
 }

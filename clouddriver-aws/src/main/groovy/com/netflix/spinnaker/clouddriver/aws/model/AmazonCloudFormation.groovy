@@ -14,25 +14,22 @@
  * limitations under the License.
  */
 
-package com.netflix.spinnaker.clouddriver.model
+package com.netflix.spinnaker.clouddriver.aws.model
 
-/**
- * A representation of a CloudDriver stack
- */
-interface CloudFormation {
-  String getType()
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.netflix.spinnaker.clouddriver.model.CloudFormation
+import groovy.transform.Immutable
 
-  String getStackId()
-
-  Map getTags()
-
-  Map getOutputs()
-
-  String getStackName()
-
-  String getStackStatus()
-
-  String getAccountName()
-
-  String getRegion()
+@Immutable
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
+class AmazonCloudFormation implements CloudFormation {
+  final String type = "aws"
+  final String stackId
+  final Map tags
+  final Map outputs
+  final String stackName
+  final String stack
+  final String stackStatus
+  final String accountName
+  final String region
 }
