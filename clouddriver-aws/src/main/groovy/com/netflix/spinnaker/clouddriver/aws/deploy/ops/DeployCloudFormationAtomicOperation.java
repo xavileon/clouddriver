@@ -89,7 +89,6 @@ public class DeployCloudFormationAtomicOperation implements AtomicOperation<Map>
     while (!finished) {
       List<StackEvent> stackEvents = amazonCloudFormation.describeStackEvents(describeStackEventsRequest).getStackEvents();
       finished = stackEvents.stream()
-        .peek(event -> log.info("event type {} status {}", event.getResourceType(), event.getResourceStatus()))
         .filter(event -> event.getResourceType().equals("AWS::CloudFormation::Stack"))
         .filter(event -> event.getResourceStatus().equals("CREATE_COMPLETE") || event.getResourceStatus().equals("ROLLBACK_COMPLETE"))
         .findAny().isPresent();
@@ -117,8 +116,8 @@ public class DeployCloudFormationAtomicOperation implements AtomicOperation<Map>
         stackEvents.stream()
           .filter(event -> event.getResourceStatus().equals("CREATE_FAILED"))
           .peek(event -> {
-            log.info("Issue: {}", event.getResourceStatusReason());
-            getTask().updateStatus("APPLY_CLOUDFORMATION", event.toString());// event.getResourceStatusReason());
+            log.info("CloudFormation failed: {}", event.getResourceStatusReason());
+              updateStatus(event);
             }
           ).findAny().isPresent();
         getTask().fail();
@@ -126,5 +125,13 @@ public class DeployCloudFormationAtomicOperation implements AtomicOperation<Map>
       }
     }
     return true;
+  }
+
+  private void updateStatus(StackEvent event) {
+    String statusMessage = event.getResourceType();
+    if (event.getResourceStatusReason() != null) {
+      statusMessage = statusMessage + " " + event.getResourceStatusReason();
+    }
+    getTask().updateStatus("APPLY_CLOUDFORMATION", statusMessage);
   }
 }
