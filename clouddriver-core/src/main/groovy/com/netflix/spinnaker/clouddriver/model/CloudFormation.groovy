@@ -22,15 +22,15 @@ package com.netflix.spinnaker.clouddriver.model
 interface CloudFormation {
   String getStackId()
 
-  Map getTags()
+  List<String> getTags()
 
-  Map getOutputs()
+  List<Map> getOutputs()
 
   String getStackName()
 
-  String getStackStatus()
-
   String getAccountName()
 
-  String getRegion()
+  String getStackStatus()
+
+  Date getCreationTime()
 }

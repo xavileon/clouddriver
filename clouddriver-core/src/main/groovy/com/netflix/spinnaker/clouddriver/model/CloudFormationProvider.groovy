@@ -19,4 +19,5 @@ package com.netflix.spinnaker.clouddriver.model
 interface CloudFormationProvider<T extends CloudFormation> {
   Set<T> getAllByAccount(String account)
   Set<T> getAllByAccountAndRegion(String account, String region)
+  T getByStackId(String stackId)
 }

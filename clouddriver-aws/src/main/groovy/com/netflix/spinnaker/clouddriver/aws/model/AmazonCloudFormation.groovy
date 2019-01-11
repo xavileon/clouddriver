@@ -25,11 +25,10 @@ import groovy.transform.Immutable
 class AmazonCloudFormation implements CloudFormation {
   final String type = "aws"
   final String stackId
-  final Map tags
-  final Map outputs
+  final List tags
+  final List<Map> outputs
   final String stackName
-  final String stack
   final String stackStatus
   final String accountName
-  final String region
+  final Date creationTime
 }

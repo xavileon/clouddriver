@@ -18,12 +18,12 @@ package com.netflix.spinnaker.clouddriver.controllers
 
 import com.netflix.spinnaker.clouddriver.model.CloudFormation
 import com.netflix.spinnaker.clouddriver.model.CloudFormationProvider
-import com.netflix.spinnaker.clouddriver.model.ElasticIp
-import com.netflix.spinnaker.clouddriver.model.ElasticIpProvider
 import com.netflix.spinnaker.clouddriver.security.AccountCredentialsProvider
+import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
 
+@Slf4j
 @RequestMapping("/cloudFormation")
 @RestController
 class CloudFormationController {
@@ -36,12 +36,9 @@ class CloudFormationController {
 
   @RequestMapping(method = RequestMethod.GET, value = "/{account}")
   Set<CloudFormation> listByAccount(@PathVariable String account) {
-    rx.Observable.from(cloudFormationProviders).flatMap {
-      rx.Observable.from(it.getAllByAccount(account))
-    } reduce(new HashSet<ElasticIp>(), { Set cloudFormations, CloudFormation cloudFormation ->
-      cloudFormations << cloudFormation
-      cloudFormations
-    }) toBlocking() first()
+    cloudFormationProviders.collect {
+      it.getAllByAccount(account)
+    }.toSet().flatten()
   }
 
 }

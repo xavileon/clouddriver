@@ -18,23 +18,19 @@ package com.netflix.spinnaker.clouddriver.aws.provider.agent
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.model.Stack
-import com.amazonaws.services.ec2.model.Address
-import com.amazonaws.services.opsworks.model.DescribeStacksResult
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.cats.agent.*
 import com.netflix.spinnaker.cats.cache.CacheData
 import com.netflix.spinnaker.cats.cache.DefaultCacheData
 import com.netflix.spinnaker.cats.provider.ProviderCache
-import com.netflix.spinnaker.clouddriver.aws.data.Keys
+import com.netflix.spinnaker.clouddriver.aws.cache.Keys
 import com.netflix.spinnaker.clouddriver.aws.provider.AwsInfrastructureProvider
 import com.netflix.spinnaker.clouddriver.aws.security.AmazonClientProvider
 import com.netflix.spinnaker.clouddriver.aws.security.NetflixAmazonCredentials
-import com.netflix.spinnaker.clouddriver.model.CloudFormation
 import groovy.util.logging.Slf4j
 
+import static com.netflix.spinnaker.clouddriver.aws.cache.Keys.Namespace.CLOUDFORMATION_STACKS
 import static com.netflix.spinnaker.cats.agent.AgentDataType.Authority.AUTHORITATIVE
-import static com.netflix.spinnaker.clouddriver.core.provider.agent.Namespace.CLOUDFORMATION
 
 @Slf4j
 class AmazonCloudFormationCachingAgent implements CachingAgent, AccountAware {
@@ -44,7 +40,7 @@ class AmazonCloudFormationCachingAgent implements CachingAgent, AccountAware {
   final ObjectMapper objectMapper
 
   static final Set<AgentDataType> types = Collections.unmodifiableSet([
-    AUTHORITATIVE.forType(CLOUDFORMATION.ns)
+    AUTHORITATIVE.forType(CLOUDFORMATION_STACKS.ns)
   ] as Set)
 
   AmazonCloudFormationCachingAgent(AmazonClientProvider amazonClientProvider,
@@ -88,17 +84,22 @@ class AmazonCloudFormationCachingAgent implements CachingAgent, AccountAware {
     Collection<CacheData> stackCacheData = new ArrayList<>(stacks.size())
 
     for (Stack stack : stacks) {
-      def stackId = Keys.getCloudFormationKey(stack.stackId, account.name, region)
+      def stackId = Keys.getCloudFormationStackKey(stack.stackId, region, account.name)
       stackCacheData.add(new DefaultCacheData(stackId, [
+        stackId: stack.stackId,
         tags: stack.tags,
         outputs: stack.outputs,
         stackName: stack.stackName,
-        creationTime: stack.creationTime,
+        accountName: account.name,
         stackStatus: stack.stackStatus,
-      ], [(CLOUDFORMATION.ns): [stackId]]))
+        creationTime: stack.creationTime
+      ], [(CLOUDFORMATION_STACKS.ns): [stackId]]))
     }
 
     log.info("Caching ${stackCacheData.size()} items in ${agentType}")
-    new DefaultCacheResult([(CLOUDFORMATION.ns): stackCacheData])
+    stackCacheData.each {
+      log.debug("Cached stack ${it.properties}")
+    }
+    new DefaultCacheResult([(CLOUDFORMATION_STACKS.ns): stackCacheData])
   }
 }
